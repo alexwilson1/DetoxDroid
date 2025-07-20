@@ -1,0 +1,5 @@
+### Release v0.2.0
+
+✨ New Features
+- Enhance GrayscaleAppsFeatureSettingsSection with dynamic title and subtitle based on app exception list type; update ViewModel to retrieve feature by ID
+

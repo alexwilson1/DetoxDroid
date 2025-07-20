@@ -88,6 +88,7 @@
     <string name="feature.doomScrolling.timeUntilWarning">Time Until Warning</string>
     <string name="feature.doomScrolling.timeUntilWarning.description">DetoxDroid will notify you if it detects that you have been "doom scrolling" for this duration.</string>
 
+    <string name="feature_settings_inclusions">App Inclusions</string>
     <string name="feature.settings.exceptions">App Exceptions</string>
     <string name="feature.settings.exceptions._notListed">%d apps will not be affected by this feature</string>
     <string name="feature.settings.exceptions._onlyListed">%d apps will only be affected by this feature</string>

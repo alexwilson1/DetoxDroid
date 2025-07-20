@@ -1,7 +1,11 @@
 package com.flx_apps.digitaldetox.ui.screens.feature.grayscale_apps
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import com.flx_apps.digitaldetox.feature_types.AppExceptionListType
+import com.flx_apps.digitaldetox.feature_types.Feature
+import com.flx_apps.digitaldetox.feature_types.SupportsAppExceptionsFeature
+import com.flx_apps.digitaldetox.features.FeaturesProvider
 import com.flx_apps.digitaldetox.features.GrayscaleAppsFeature
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,7 +18,13 @@ import kotlin.time.Duration.Companion.minutes
  * The view model for the grayscale apps feature settings tile.
  */
 @HiltViewModel
-class GrayscaleAppsFeatureSettingsViewModel @Inject constructor() : ViewModel() {
+class GrayscaleAppsFeatureSettingsViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle
+) : ViewModel() {
+
+    private val featureId: String = savedStateHandle["featureId"]!!
+    val feature = FeaturesProvider.getFeatureById(featureId)!! as SupportsAppExceptionsFeature
+
     /**
      * Whether the extra dim feature is activated.
      * @see GrayscaleAppsFeature.extraDim

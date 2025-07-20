@@ -43,8 +43,25 @@ import kotlin.time.Duration.Companion.minutes
 fun GrayscaleAppsFeatureSettingsSection(
     viewModel: GrayscaleAppsFeatureSettingsViewModel = viewModel()
 ) {
+    val appExceptionListType = viewModel.appExceptionListType.collectAsState().value
+    val feature = viewModel.feature
+
+    val titleText = if (appExceptionListType == AppExceptionListType.NOT_LIST) {
+        stringResource(id = R.string.feature_settings_exceptions)
+    } else {
+        stringResource(id = R.string.feature_settings_inclusions)
+    }
+
+    val subtitleText = stringResource(
+        id = if (appExceptionListType == AppExceptionListType.NOT_LIST) R.string.feature_settings_exceptions__notListed
+        else R.string.feature_settings_exceptions__onlyListed, feature.appExceptions.size
+    )
+
     AppExceptionListTypeTile()
-    OpenAppExceptionsTile()
+    OpenAppExceptionsTile(
+        titleText = titleText,
+        subtitleText = subtitleText
+    )
     OpenScheduleTile()
     ExtraDimTile()
     IgnoreFullScreenAppsTile()

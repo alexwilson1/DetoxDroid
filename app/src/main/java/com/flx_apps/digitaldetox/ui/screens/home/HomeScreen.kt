@@ -212,7 +212,7 @@ private fun AppBar(detoxDroidState: DetoxDroidState) {
                                 val pauseEndTime = Instant.ofEpochMilli(PauseButtonFeature.pauseUntil)
                                     .atZone(ZoneId.systemDefault())
                                     .toLocalDateTime()
-                                    .format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
+                                     .format(DateTimeFormatter.ofLocalizedTime(FormatStyle.MEDIUM))
                                 pauseEndTime
                             } else ""
                         ), style = MaterialTheme.typography.labelSmall

@@ -1,0 +1,5 @@
+### Release v1.1.0
+
+🐛 Bug Fixes
+- Update pause end time format in HomeScreen to use MEDIUM style for better readability
+

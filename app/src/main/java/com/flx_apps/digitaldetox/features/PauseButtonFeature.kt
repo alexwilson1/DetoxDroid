@@ -1,6 +1,8 @@
 package com.flx_apps.digitaldetox.features
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.view.KeyEvent
 import android.widget.Toast
 import androidx.compose.runtime.Composable
@@ -69,7 +71,10 @@ object PauseButtonFeature : Feature() {
     /**
      * Holds the time until the pause is over.
      */
-    private var pauseUntil = 0L
+    var pauseUntil = 0L
+
+    private val handler = Handler(Looper.getMainLooper())
+    private var unpauseRunnable: Runnable? = null
 
     override fun onPause(context: Context) {
         pauseUntil = System.currentTimeMillis() + pauseDuration
@@ -79,6 +84,13 @@ object PauseButtonFeature : Feature() {
                 TimeUnit.MILLISECONDS.toMinutes(pauseDuration)
             ), Toast.LENGTH_SHORT
         ).show()
+
+        // Schedule a task to automatically resume after the pause duration
+        unpauseRunnable?.let { handler.removeCallbacks(it) } // Remove any previously scheduled runnable
+        unpauseRunnable = Runnable { resume() }.also {
+            // Post with a small buffer to ensure the pause time has definitely elapsed
+            handler.postDelayed(it, pauseDuration + 500)
+        }
     }
 
     fun togglePause(context: Context) {
@@ -108,6 +120,8 @@ object PauseButtonFeature : Feature() {
     }
 
     fun resume() {
+        unpauseRunnable?.let { handler.removeCallbacks(it) } // Cancel the scheduled auto-resume task
+        unpauseRunnable = null
         pauseUntil = 0
         DetoxDroidAccessibilityService.instance.takeIf { it != null }?.let { service ->
             // call onStart() for all active features if we have an instance of the service

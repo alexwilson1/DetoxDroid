@@ -9,35 +9,45 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -47,6 +57,7 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import co.yml.charts.common.components.Legends
 import co.yml.charts.common.model.AccessibilityConfig
@@ -64,16 +75,20 @@ import com.flx_apps.digitaldetox.system_integration.DetoxDroidState
 import com.flx_apps.digitaldetox.system_integration.UsageStatsProvider
 import com.flx_apps.digitaldetox.ui.screens.nav_host.NavViewModel
 import com.flx_apps.digitaldetox.ui.widgets.InfoCard
+import com.flx_apps.digitaldetox.ui.widgets.NumberPickerDialog
 import com.flx_apps.digitaldetox.ui.widgets.SimpleListTile
 import com.flx_apps.digitaldetox.util.NavigationUtil
 import com.flx_apps.digitaldetox.util.observeAsState
 import com.flx_apps.digitaldetox.util.toHrMinString
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import timber.log.Timber
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
-import java.time.temporal.ChronoUnit
+import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
@@ -87,6 +102,46 @@ fun HomeScreen(
     val detoxDroidState: DetoxDroidState = homeViewModel.detoxDroidState.collectAsState().value
     Timber.d("detoxDroidState = $detoxDroidState")
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val showPauseOrStopDialog by homeViewModel.showPauseOrStopDialog.collectAsState()
+    val showStopWarning1 by homeViewModel.showStopWarning1.collectAsState()
+    val showStopWarning2 by homeViewModel.showStopWarning2.collectAsState()
+
+    if (showPauseOrStopDialog) {
+        PauseOrStopDialog(
+            onDismiss = { homeViewModel.setShowPauseOrStopDialog(false) },
+            onPause = { durationMillis ->
+                homeViewModel.pauseDetoxDroid(durationMillis)
+                homeViewModel.setShowPauseOrStopDialog(false)
+            },
+            onStopClicked = {
+                homeViewModel.setShowPauseOrStopDialog(false)
+                homeViewModel.setShowStopWarning1(true)
+            }
+        )
+    }
+
+    if (showStopWarning1) {
+        StopWarningDialog1(
+            onDismiss = { homeViewModel.setShowStopWarning1(false) },
+            onConfirm = {
+                homeViewModel.setShowStopWarning1(false)
+                homeViewModel.setShowStopWarning2(true)
+            }
+        )
+    }
+
+    if (showStopWarning2) {
+        StopWarningDialog2(
+            onDismiss = { homeViewModel.setShowStopWarning2(false) },
+            onConfirm = {
+                homeViewModel.setShowStopWarning2(false)
+                homeViewModel.toggleDetoxDroidIsRunning()
+            }
+        )
+    }
+
+
     Scaffold(snackbarHost = {
         SnackbarHost(hostState = snackbarHostState)
     }, topBar = {
@@ -154,11 +209,11 @@ private fun AppBar(detoxDroidState: DetoxDroidState) {
                                 DetoxDroidState.Inactive -> R.string.home_state_inactive
                                 DetoxDroidState.Paused -> R.string.home_state_paused
                             }, if (detoxDroidState == DetoxDroidState.Paused) {
-                                LocalDateTime.now().plus(
-                                    PauseButtonFeature.pauseDuration, ChronoUnit.MILLIS
-                                ).format(
-                                    DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
-                                )
+                                val pauseEndTime = Instant.ofEpochMilli(PauseButtonFeature.pauseUntil)
+                                    .atZone(ZoneId.systemDefault())
+                                    .toLocalDateTime()
+                                    .format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
+                                pauseEndTime
                             } else ""
                         ), style = MaterialTheme.typography.labelSmall
                     )
@@ -173,20 +228,34 @@ private fun AppBar(detoxDroidState: DetoxDroidState) {
  */
 @Composable
 private fun StartStopActionButton(
-    detoxDroidState: DetoxDroidState, homeViewModel: HomeViewModel = viewModel()
+    detoxDroidState: DetoxDroidState,
+    homeViewModel: HomeViewModel = viewModel()
 ) {
-    ExtendedFloatingActionButton(text = { Text(text = stringResource(id = if (detoxDroidState != DetoxDroidState.Inactive) R.string.home_stop else R.string.home_start)) },
+    val text = when (detoxDroidState) {
+        DetoxDroidState.Active -> stringResource(id = R.string.home_stop)
+        DetoxDroidState.Paused -> stringResource(id = R.string.home_resume)
+        DetoxDroidState.Inactive -> stringResource(id = R.string.home_start)
+    }
+
+    val icon = when (detoxDroidState) {
+        DetoxDroidState.Active -> painterResource(id = R.drawable.ic_stop)
+        DetoxDroidState.Paused -> painterResource(id = R.drawable.ic_start)
+        DetoxDroidState.Inactive -> painterResource(id = R.drawable.ic_start)
+    }
+
+    ExtendedFloatingActionButton(text = { Text(text = text) },
         icon = {
             Icon(
-                painter = if (detoxDroidState != DetoxDroidState.Inactive) painterResource(
-                    id = R.drawable.ic_stop
-                ) else painterResource(
-                    id = R.drawable.ic_start
-                ), contentDescription = "Run/Stop DetoxDroid"
+                painter = icon,
+                contentDescription = "Run/Stop/Resume DetoxDroid"
             )
         },
         onClick = {
-            homeViewModel.toggleDetoxDroidIsRunning()
+            when (detoxDroidState) {
+                DetoxDroidState.Active -> homeViewModel.setShowPauseOrStopDialog(true)
+                DetoxDroidState.Paused -> PauseButtonFeature.resume()
+                DetoxDroidState.Inactive -> homeViewModel.toggleDetoxDroidIsRunning()
+            }
         })
 }
 
@@ -295,6 +364,162 @@ fun UninstallDetoxDroidTile(viewModel: HomeViewModel = viewModel()) {
             showAreYouSureDialog.value = true
         })
     Divider()
+}
+
+@Composable
+fun PauseOrStopDialog(
+    onDismiss: () -> Unit,
+    onPause: (Long) -> Unit,
+    onStopClicked: () -> Unit
+) {
+    val context = LocalContext.current
+    val customKey = stringResource(R.string.home_pauseOrStop_option_custom)
+    val pauseOptions = remember {
+        mapOf(
+            context.getString(R.string.home_pauseOrStop_option_5_min) to TimeUnit.MINUTES.toMillis(5),
+            context.getString(R.string.home_pauseOrStop_option_10_min) to TimeUnit.MINUTES.toMillis(10),
+            context.getString(R.string.home_pauseOrStop_option_15_min) to TimeUnit.MINUTES.toMillis(15),
+            context.getString(R.string.home_pauseOrStop_option_30_min) to TimeUnit.MINUTES.toMillis(30),
+            customKey to -1L
+        )
+    }
+
+    var selectedOption by remember { mutableStateOf(pauseOptions.keys.first()) }
+    var showCustomTimePicker by remember { mutableStateOf(false) }
+
+    if (showCustomTimePicker) {
+        NumberPickerDialog(
+            titleText = stringResource(id = R.string.feature_pause_duration),
+            initialValue = 5,
+            range = 1..120,
+            label = { context.getString(R.string.time__minutes, it) },
+            onValueSelected = { minutes ->
+                onPause(TimeUnit.MINUTES.toMillis(minutes.toLong()))
+                showCustomTimePicker = false
+            },
+            onDismissRequest = { showCustomTimePicker = false }
+        )
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(shape = RoundedCornerShape(28.dp)) {
+            Column(
+                modifier = Modifier.padding(24.dp)
+            ) {
+                Text(
+                    text = stringResource(id = R.string.home_pauseOrStop_title),
+                    style = MaterialTheme.typography.headlineSmall
+                )
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = stringResource(id = R.string.home_pauseOrStop_subtitle),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(Modifier.height(16.dp))
+
+                pauseOptions.forEach { (text, _) ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = (text == selectedOption),
+                                onClick = { selectedOption = text }
+                            )
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = (text == selectedOption),
+                            onClick = { selectedOption = text }
+                        )
+                        Text(
+                            text = text,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(start = 16.dp)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(24.dp))
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Button(
+                        onClick = {
+                            if (selectedOption == customKey) {
+                                showCustomTimePicker = true
+                            } else {
+                                onPause(pauseOptions[selectedOption]!!)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(stringResource(R.string.home_pauseOrStop_pause_button))
+                    }
+                    TextButton(onClick = onStopClicked) {
+                        Text(stringResource(R.string.home_pauseOrStop_stop_link))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun StopWarningDialog1(onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    var buttonEnabled by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(30000)
+        buttonEnabled = true
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(id = R.string.home_stop_warning_1_title)) },
+        text = { Text(stringResource(id = R.string.home_stop_warning_1_message)) },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = buttonEnabled
+            ) {
+                Text(stringResource(id = R.string.home_stop_warning_continue))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(id = R.string.action_cancel))
+            }
+        }
+    )
+}
+
+@Composable
+fun StopWarningDialog2(onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    var buttonEnabled by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(30000)
+        buttonEnabled = true
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(id = R.string.home_stop_warning_2_title)) },
+        text = { Text(stringResource(id = R.string.home_stop_warning_2_message)) },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = buttonEnabled
+            ) {
+                Text(stringResource(id = R.string.home_stop_warning_stop_anyway))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(id = R.string.action_cancel))
+            }
+        }
+    )
 }
 
 /**

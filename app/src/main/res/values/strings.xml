@@ -34,6 +34,7 @@
 
     <string name="home.start">Start DetoxDroid</string>
     <string name="home.stop">Stop DetoxDroid</string>
+    <string name="home.resume">Resume DetoxDroid</string>
     <string name="home.state.active">Running</string>
     <string name="home.state.paused">Paused until %s</string>
     <string name="home.state.inactive">Stopped</string>
@@ -44,6 +45,22 @@
     <string name="home.uninstall.hint">It might not be possible for you to uninstall DetoxDroid normally, as you have granted particular permissions by installing it from your computer. Press here to uninstall.</string>
     <string name="home.uninstall.dialog.title">Are You Sure?</string>
     <string name="home.uninstall.dialog.message">Pressing \"Uninstall\" will revoke permissions that you granted to DetoxDroid. You will then be able to uninstall it normally.\n\nIf you choose to use DetoxDroid again, you will have to grant these permissions again.</string>
+
+    <string name="home.pauseOrStop.title">Pause or Stop?</string>
+    <string name="home.pauseOrStop.subtitle">Select how long to pause</string>
+    <string name="home.pauseOrStop.option_5_min">5 min</string>
+    <string name="home.pauseOrStop.option_10_min">10 min</string>
+    <string name="home.pauseOrStop.option_15_min">15 min</string>
+    <string name="home.pauseOrStop.option_30_min">30 min</string>
+    <string name="home.pauseOrStop.option_custom">Custom…</string>
+    <string name="home.pauseOrStop.pause_button">Pause</string>
+    <string name="home.pauseOrStop.stop_link">I want to stop</string>
+    <string name="home.stop_warning_1_title">Are you sure?</string>
+    <string name="home.stop_warning_1_message">Stopping DetoxDroid completely defeats its purpose. Consider pausing instead. The app will be less effective if you stop it frequently. Please reconsider for 30 seconds.</string>
+    <string name="home.stop_warning_2_title">Really, really sure?</string>
+    <string name="home.stop_warning_2_message">This is your last chance to turn back. True change requires commitment. Pausing is always an option. Please reconsider for 30 seconds.</string>
+    <string name="home.stop_warning_continue">Continue</string>
+    <string name="home.stop_warning_stop_anyway">Stop Anyway</string>
 
     <string name="feature.doNotDisturb">\"Do Not Disturb\" Mode</string>
     <string name="feature.doNotDisturb.subtitle">Make it your new default</string>

@@ -6,6 +6,8 @@ import android.provider.Settings
 import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import com.flx_apps.digitaldetox.DetoxDroidApplication
+import com.flx_apps.digitaldetox.features.FeaturesProvider
+import com.flx_apps.digitaldetox.features.PauseButtonFeature
 import com.flx_apps.digitaldetox.system_integration.DetoxDroidAccessibilityService
 import com.flx_apps.digitaldetox.system_integration.DetoxDroidDeviceAdminReceiver
 import com.flx_apps.digitaldetox.system_integration.DetoxDroidState
@@ -45,6 +47,47 @@ class HomeViewModel @Inject constructor(
 
     private val _snackbarState = MutableStateFlow(HomeScreenSnackbarState.Hidden)
     val snackbarState: StateFlow<HomeScreenSnackbarState> = _snackbarState
+
+    private val _showPauseOrStopDialog = MutableStateFlow(false)
+    val showPauseOrStopDialog: StateFlow<Boolean> = _showPauseOrStopDialog
+
+    private val _showStopWarning1 = MutableStateFlow(false)
+    val showStopWarning1: StateFlow<Boolean> = _showStopWarning1
+
+    private val _showStopWarning2 = MutableStateFlow(false)
+    val showStopWarning2: StateFlow<Boolean> = _showStopWarning2
+
+    fun setShowPauseOrStopDialog(show: Boolean) {
+        _showPauseOrStopDialog.value = show
+    }
+
+    fun setShowStopWarning1(show: Boolean) {
+        _showStopWarning1.value = show
+    }
+
+    fun setShowStopWarning2(show: Boolean) {
+        _showStopWarning2.value = show
+    }
+
+    /**
+     * Pauses all features for a given duration.
+     * @param durationMillis The duration to pause for.
+     */
+    fun pauseDetoxDroid(durationMillis: Long) {
+        PauseButtonFeature.pauseDuration = durationMillis
+        // This will set the pauseUntil timestamp and show a toast.
+        PauseButtonFeature.onPause(application)
+
+        // Pause other active features.
+        FeaturesProvider.featureList.forEach { feature ->
+            if (feature.isActive() && feature != PauseButtonFeature) {
+                feature.onPause(application)
+            }
+        }
+
+        // And update the service state.
+        DetoxDroidAccessibilityService.updateState()
+    }
 
     /**
      * Toggles the state of the accessibility service.

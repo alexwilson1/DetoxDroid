@@ -70,8 +70,7 @@ open class DetoxDroidAccessibilityService : AccessibilityService() {
     private var lastPackage = ""
     private var ignoredEventClasses = mutableSetOf(
         "android.inputmethodservice.SoftInputWindow",
-        "com.android.systemui.volume",
-        "com.android.quickstep.RecentsActivity"
+        "com.android.systemui.volume"
     )
     private var ignoredPackages = mutableSetOf<String>()
     private var screenTurnedOffReceiver = ScreenTurnedOffReceiver()

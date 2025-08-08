@@ -1,1 +1,5 @@
-Initial release
+### Release v1.0.0
+
+✨ New Features
+- Implement pause and stop functionality with user prompts in HomeScreen and ViewModel
+

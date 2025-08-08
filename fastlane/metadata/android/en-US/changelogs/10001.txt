@@ -1,1 +1,2 @@
-Implemented "minimum time between pauses" feature
+### Release v1.0.1
+

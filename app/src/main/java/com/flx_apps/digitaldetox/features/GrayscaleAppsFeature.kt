@@ -61,6 +61,9 @@ object GrayscaleAppsFeature : Feature(), OnAppOpenedSubscriptionFeature,
      */
     private var defaultDaltonizer: Int = -1
 
+    // NEW: also remember whether color correction was enabled.
+    private var defaultDaltonizerEnabled: Int = 0
+
     /**
      * Whether the extra dim filter should be turned on when the grayscale filter is active.
      */
@@ -160,19 +163,23 @@ object GrayscaleAppsFeature : Feature(), OnAppOpenedSubscriptionFeature,
     private fun setGrayscale(
         context: Context, grayscale: Boolean
     ): Boolean {
+        val contentResolver = context.contentResolver
+
         if (grayscale) {
-            // save the current color filter
+            // save the current color correction state (enabled + mode)
+            defaultDaltonizerEnabled = Settings.Secure.getInt(
+                contentResolver, DISPLAY_DALTONIZER_ENABLED, 0
+            )
             defaultDaltonizer = Settings.Secure.getInt(
-                context.contentResolver, DISPLAY_DALTONIZER, -1
+                contentResolver, DISPLAY_DALTONIZER, -1
             )
         }
 
-        val contentResolver = context.contentResolver
-        // enable/disable grayscale
+        // enable/disable grayscale or restore previous state
         val result1 = Settings.Secure.putInt(
             contentResolver,
             DISPLAY_DALTONIZER_ENABLED,
-            if (grayscale || defaultDaltonizer != -1) 1 else 0
+            if (grayscale) 1 else defaultDaltonizerEnabled
         )
         val result2 = Settings.Secure.putInt(
             contentResolver, DISPLAY_DALTONIZER, if (grayscale) 0 else defaultDaltonizer
